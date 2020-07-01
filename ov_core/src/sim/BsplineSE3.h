@@ -23,6 +23,8 @@
 
 
 #include <Eigen/Eigen>
+#include <unordered_map>
+#include <map>
 
 #include "utils/quat_ops.h"
 

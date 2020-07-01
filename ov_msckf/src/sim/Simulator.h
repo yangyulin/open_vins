@@ -27,6 +27,7 @@
 #include <random>
 #include <string>
 #include <unordered_map>
+#include <map>
 
 #include <Eigen/Eigen>
 #include <Eigen/StdVector>
