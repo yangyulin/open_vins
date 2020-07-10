@@ -21,6 +21,8 @@
 #ifndef OV_CORE_INERTIALINITIALIZER_H
 #define OV_CORE_INERTIALINITIALIZER_H
 
+#include <vector>
+#include <iostream>
 #include <Eigen/Eigen>
 #include "utils/quat_ops.h"
 #include "utils/colors.h"
