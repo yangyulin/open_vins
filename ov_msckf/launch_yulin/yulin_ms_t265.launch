@@ -7,8 +7,8 @@
 
         <!-- bag topics -->
         <param name="topic_imu"      type="string" value="/imu/data" />
-        <param name="topic_camera0"  type="string" value="/camera_pg/image_raw" />
-<!--        <param name="topic_camera1"  type="string" value="/camera/color/image_raw" />-->
+        <param name="topic_camera0"  type="string" value="/camera/fisheye1/image_raw" />
+        <param name="topic_camera1"  type="string" value="/camera/fisheye2/image_raw" />
 
         <!-- bag parameters -->
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_d435/2020-07-17-11-13-13.bag" />-->
@@ -19,8 +19,7 @@
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_d435_19_2/bag_02.bag" />-->
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_d435_19_3/bag_03.bag" />-->
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_d435_19_4/bag_04.bag" />-->
-<!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_pg_imu_02/bag_02.bag" />-->
-        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_pg_imu_01/bag_01.bag" />
+        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_t265_19/bag_01.bag" />
         <param name="bag_start"   type="int"    value="1" />
         <param name="bag_durr"    type="int"    value="-1" />
 
@@ -32,14 +31,14 @@
         <param name="calib_cam_extrinsics"   type="bool"   value="true" />
         <param name="calib_cam_intrinsics"   type="bool"   value="true" />
         <param name="calib_cam_timeoffset"   type="bool"   value="true" />
-        <param name="calib_camimu_dt"        type="double" value="-0.0198427150779" />
-        <param name="max_clones"             type="int"    value="10" />
+        <param name="calib_camimu_dt"        type="double" value="0.00960783717104" />
+        <param name="max_clones"             type="int"    value="20" />
         <param name="max_slam"               type="int"    value="30" />
-        <param name="max_cameras"            type="int"    value="1" />
+        <param name="max_cameras"            type="int"    value="2" />
         <param name="dt_slam_delay"          type="double" value="5" />
         <param name="feat_representation"    type="string" value="ANCHORED_3D" />
         <param name="init_window_time"       type="double" value="1.0" />
-        <param name="init_imu_thresh"        type="double" value="0.3" />
+        <param name="init_imu_thresh"        type="double" value="0.2" />
         <rosparam param="gravity">[0.0,0.0,9.80766]</rosparam>
 
         <!-- tracker/extractor properties -->
@@ -71,15 +70,26 @@
 
         <!-- camera intrinsics -->
         <param name="cam0_is_fisheye" type="bool" value="true" />
-            <rosparam param="cam0_k">[493.8927678056239, 492.67448158870775, 399.12418359066714, 327.44085655941797]</rosparam>
-            <rosparam param="cam0_d">[-0.07619202176056616, 0.003787684884668601, -0.013358543555244486, 0.0067911944821123045]</rosparam>
+        <param name="cam1_is_fisheye" type="bool" value="true" />
+        <rosparam param="cam0_k">[293.9848077897889, 293.4486654904098, 421.968565045988, 395.1500716819685]</rosparam>
+        <rosparam param="cam0_d">[-0.012306642629148592, 0.06549168388654483, -0.07152333743873135, 0.01820845224100378]</rosparam>
+        <rosparam param="cam1_k">[293.44045984429465, 293.02802861469144, 420.83274194521255, 396.0334231251445]</rosparam>
+        <rosparam param="cam1_d">[-0.010093534577301232, 0.06098470641277384, -0.06937157211524878, 0.018044878467046957]</rosparam>
+
         <!-- camera extrinsics -->
-            <rosparam param="T_C0toI">
-                    [ 0.99936263,  0.01298865,  0.03325112,  0.1321472,
-                     0.03302234,  0.01744751, -0.99930231, -0.04458355,
-                    -0.01355974,  0.99976341,  0.01700747, -0.02524139,
-                     0,          0,          0,          1        ]
-            </rosparam>
+        <rosparam param="T_C0toI">
+                [ 0.99954645,  0.00174066,  0.0300643,   0.0575828,
+                 0.03004926,  0.00810494, -0.99951556, -0.02288765,
+                -0.00198349,  0.99996564,  0.00804896,  0.02500182,
+                 0,          0,          0,          1        ]
+        </rosparam>
+        <rosparam param="T_C1toI">
+                 [ 0.99932317,  0.00103429,  0.03677122,  0.12335033,
+                   0.03675949,  0.0096933,  -0.99927713, -0.0218943,
+                   -0.00138997,  0.99995248,  0.00964872,  0.02562038,
+                    0,          0,          0,          1        ]
+        </rosparam>
+
 
     </node>
 
