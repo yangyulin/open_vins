@@ -108,6 +108,9 @@ if (catkin_FOUND)
     add_executable(run_serial_msckf src/ros_serial_msckf.cpp)
     target_link_libraries(run_serial_msckf ov_msckf_lib ${thirdparty_libraries})
 
+    add_executable(run_serial_msckf_blackbird src/ros_serial_msckf_blackbird.cpp)
+    target_link_libraries(run_serial_msckf_blackbird ov_msckf_lib ${thirdparty_libraries})
+
     add_executable(run_subscribe_msckf src/ros_subscribe_msckf.cpp)
     target_link_libraries(run_subscribe_msckf ov_msckf_lib ${thirdparty_libraries})
 
