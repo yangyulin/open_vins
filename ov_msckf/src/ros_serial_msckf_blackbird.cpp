@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 {
 
     // Launch our ros node
-    ros::init(argc, argv, "run_serial_msckf");
+    ros::init(argc, argv, "run_serial_msckf_blackbird");
     ros::NodeHandle nh("~");
 
     // Create our VIO system
