@@ -107,13 +107,9 @@ int main(int argc, char** argv)
     path_to_right_img = path_to_img_foler + "Camera_Right_Gray/lossless.mov";
     path_to_right_img_time = path_to_img_foler + "Camera_Right_Gray/nSecTimestamps.txt";
     // Create an input filestream
-//    std::ifstream left_img_file(path_to_left_img);
-//    std::ifstream right_img_file(path_to_right_img);
     std::ifstream left_img_time_file(path_to_left_img_time.c_str());
     std::ifstream right_img_time_file(path_to_right_img_time.c_str());
     // Make sure the file is open
-//    if(!left_img_file.is_open())  ROS_ERROR("Left image file is not found!");
-//    if(!right_img_file.is_open())  ROS_ERROR("Right image file is not found!");
     if(!left_img_time_file.is_open())  ROS_ERROR("Left image time file is not found!");
     if(!right_img_time_file.is_open())  ROS_ERROR("Right image time file is not found!");
 
