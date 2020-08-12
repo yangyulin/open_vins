@@ -32,6 +32,8 @@
 #include "utils/dataset_reader.h"
 #include "utils/parse_ros.h"
 
+#include <quadrotor_msgs/MotorRPM.h>
+
 
 using namespace ov_msckf;
 
@@ -61,14 +63,16 @@ int main(int argc, char** argv)
     // Our camera topics (left and right stereo)
     std::string topic_imu;
     std::string topic_camera0, topic_camera1;
-    nh.param<std::string>("topic_imu", topic_imu, "/imu0");
-    nh.param<std::string>("topic_camera0", topic_camera0, "/cam0/image_raw");
-    nh.param<std::string>("topic_camera1", topic_camera1, "/cam1/image_raw");
+    nh.param<std::string>("topic_imu", topic_imu, "/blackbird/imu");
+
+    std::string topic_bb_gt_pose;
+    std::string topic_bb_rpm;
+    nh.param<std::string>("topic_bb_gt_pose", topic_bb_gt_pose, "/blackbird/state");
+    nh.param<std::string>("topic_bb_rpm", topic_bb_rpm, "/blackbird/rotor_rpm");
 
     // Location of the ROS bag we want to read in
     std::string path_to_bag;
-    nh.param<std::string>("path_bag", path_to_bag, "/home/patrick/datasets/eth/V1_01_easy.bag");
-    ROS_INFO("ros bag path is: %s", path_to_bag.c_str());
+    nh.param<std::string>("path_bag", path_to_bag, "/home/lin/BlackbirdDatasetData/bentDice/yawForward/maxSpeed3p0/rosbag.bag");
 
     // Load groundtruth if we have it
     std::map<double, Eigen::Matrix<double, 17, 1>> gt_states;
@@ -78,6 +82,8 @@ int main(int argc, char** argv)
         DatasetReader::load_gt_file(path_to_gt, gt_states);
         ROS_INFO("gt file path is: %s", path_to_gt.c_str());
     }
+    std::map<double, Eigen::Matrix<double, 7, 1>> gt_poses;
+
 
     // Get our start location and how much of the bag we want to play
     // Make the bag duration < 0 to just process to the end of the bag
@@ -90,12 +96,34 @@ int main(int argc, char** argv)
     // Read in what mode we should be processing in (1=mono, 2=stereo)
     int max_cameras;
     nh.param<int>("max_cameras", max_cameras, 1);
+    std::string path_to_img_foler;
+    std::string path_to_left_img;
+    std::string path_to_left_img_time;
+    std::string path_to_right_img;
+    std::string path_to_right_img_time;
+    nh.param<std::string>("path_img", path_to_img_foler, "/home/lin/BlackbirdDatasetData/bentDice/yawForward/maxSpeed3p0/Ancient_Asia_Museum_Room/");
+    path_to_left_img = path_to_img_foler + "Camera_Left_Gray/lossless.mov";
+    path_to_left_img_time = path_to_img_foler + "Camera_Left_Gray/nSecTimestamps.txt";
+    path_to_right_img = path_to_img_foler + "Camera_Right_Gray/lossless.mov";
+    path_to_right_img_time = path_to_img_foler + "Camera_Right_Gray/nSecTimestamps.txt";
+    // Create an input filestream
+//    std::ifstream left_img_file(path_to_left_img);
+//    std::ifstream right_img_file(path_to_right_img);
+    std::ifstream left_img_time_file(path_to_left_img_time.c_str());
+    std::ifstream right_img_time_file(path_to_right_img_time.c_str());
+    // Make sure the file is open
+//    if(!left_img_file.is_open())  ROS_ERROR("Left image file is not found!");
+//    if(!right_img_file.is_open())  ROS_ERROR("Right image file is not found!");
+    if(!left_img_time_file.is_open())  ROS_ERROR("Left image time file is not found!");
+    if(!right_img_time_file.is_open())  ROS_ERROR("Right image time file is not found!");
 
+    // time vec
+    std::vector<double> times_left_img;
+    std::vector<double> times_right_img;
 
     //===================================================================================
     //===================================================================================
     //===================================================================================
-
 
     // Load rosbag here, and find messages we can play
     rosbag::Bag bag;
@@ -159,44 +187,80 @@ int main(int argc, char** argv)
             viz->visualize_odometry(timem);
         }
 
-        // Handle LEFT camera
-        sensor_msgs::Image::ConstPtr s0 = m.instantiate<sensor_msgs::Image>();
-        if (s0 != nullptr && m.getTopic() == topic_camera0) {
-            // Get the image
-            cv_bridge::CvImageConstPtr cv_ptr;
-            try {
-                cv_ptr = cv_bridge::toCvShare(s0, sensor_msgs::image_encodings::MONO8);
-            } catch (cv_bridge::Exception &e) {
-                ROS_ERROR("cv_bridge exception: %s", e.what());
-                continue;
+
+        // Handle MAV rpm measurements
+        // Handle quadrotor pose message
+        boost::shared_ptr<quadrotor_msgs::MotorRPM> s3 = m.instantiate<quadrotor_msgs::MotorRPM>();
+        if(s3 != nullptr && m.getTopic() == topic_bb_rpm){
+            // convert to the right format
+            double timem = s3->sample_stamp[0].toSec();
+            std::setprecision(14);
+            std::cout  << timem << " ";
+            std::setprecision(9);
+            for(int i=0; i<s3->rpm.size(); i++){
+                std::cout << s3->rpm[i] * 2*3.1415926/60 << " ";
             }
-            // Save to our temp variable
-            has_left = true;
-            img0 = cv_ptr->image.clone();
-            time = cv_ptr->header.stamp.toSec();
+            std::cout << std::endl;
         }
 
-        // Handle RIGHT camera
-        sensor_msgs::Image::ConstPtr s1 = m.instantiate<sensor_msgs::Image>();
-        if (s1 != nullptr && m.getTopic() == topic_camera1) {
-            // Get the image
-            cv_bridge::CvImageConstPtr cv_ptr;
-            try {
-                cv_ptr = cv_bridge::toCvShare(s1, sensor_msgs::image_encodings::MONO8);
-            } catch (cv_bridge::Exception &e) {
-                ROS_ERROR("cv_bridge exception: %s", e.what());
-                continue;
-            }
-            // Save to our temp variable (use a right image that is near in time)
-            // TODO: fix this logic as the left will still advance instead of waiting
-            // TODO: should implement something like here:
-            // TODO: https://github.com/rpng/MARS-VINS/blob/master/example_ros/ros_driver.cpp
-            //if(std::abs(cv_ptr->header.stamp.toSec()-time) < 0.02) {
-            has_right = true;
-            img1 = cv_ptr->image.clone();
-            //}
-        }
 
+        // Handle quadrotor gt pose message
+        geometry_msgs::PoseStampedConstPtr ptr2 = m.instantiate<geometry_msgs::PoseStamped>();
+        if(ptr2 != nullptr && m.getTopic() == topic_bb_gt_pose){
+            // convert to the right format
+            double timem = ptr2->header.stamp.toSec();
+            Eigen::Matrix<double, 4, 1> qm; // q_M_to_G
+            Eigen::Matrix<double, 3, 1> pm; // p_M_in_G
+            qm << ptr2->pose.orientation.x, ptr2->pose.orientation.y, ptr2->pose.orientation.z, ptr2->pose.orientation.w;
+            pm << ptr2->pose.position.x, ptr2->pose.position.y, ptr2->pose.position.z;
+            // wrap the poses
+            Eigen::Matrix<double,7,1> posem; posem << pm, qm;
+            // store gt poses
+            gt_poses.insert({timem, posem});
+        }
+    }
+
+    // load the left camera time vector
+    double temp_time;
+    string line;
+    while(left_img_time_file.good()){
+        std::getline(left_img_time_file, line);
+        std::stringstream ss(line);
+        ss >> temp_time;
+        times_left_img.push_back(temp_time/1.0e-9);
+    }
+    // load the right camera time vector
+    if(max_cameras == 2 ){
+        while(right_img_time_file.good()){
+            std::getline(right_img_time_file, line);
+            std::stringstream ss(line);
+            ss >> temp_time;
+            times_right_img.push_back(temp_time/1.0e-9);
+        }
+    }
+
+    // setup the video file reading
+    cv::VideoCapture cap_left(path_to_left_img.c_str());
+    if(!cap_left.isOpened()) ROS_ERROR("Left image file is not found!");
+    assert (cap_left.get(CV_CAP_PROP_FRAME_COUNT) == times_left_img.size());
+    cv::VideoCapture cap_right(path_to_right_img.c_str());
+    if(max_cameras == 2) {
+        if(!cap_right.isOpened()) ROS_ERROR("Right image file is not found!");
+        assert(times_left_img.size() == times_right_img.size());
+        assert(cap_right.get(CV_CAP_PROP_FRAME_COUNT) == times_right_img.size());
+    }
+
+    // now begin to process the measurements
+    for(size_t i=0; i<times_left_img.size(); i++){
+        // read left image
+        cap_left.set ( CV_CAP_PROP_POS_FRAMES , i );
+        has_left = cap_left.read(img0);
+        time = times_left_img.at(i);
+        // read right image
+        if(max_cameras == 2){
+            cap_right.set(CV_CAP_PROP_POS_FRAMES, i);
+            has_right = cap_right.read(img1);
+        }
 
         // Fill our buffer if we have not
         if(has_left && img0_buffer.rows == 0) {
@@ -255,7 +319,10 @@ int main(int argc, char** argv)
             img1_buffer = img1.clone();
         }
 
+
     }
+
+
 
     // Final visualization
     viz->visualize_final();
