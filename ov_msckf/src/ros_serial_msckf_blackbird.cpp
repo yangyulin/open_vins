@@ -263,7 +263,7 @@ int main(int argc, char** argv)
 
         if(ct_img == skip) {
             std::cout << "processing the " << i << "-th image!" << std::endl;
-            time = times_left_img.at(i);
+            time = times_left_img.at(i+1);
 
             // process the imu first
             double time_imu = times_imu.front();
