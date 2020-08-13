@@ -145,6 +145,7 @@ void VioManager::feed_measurement_imu(double timestamp, Eigen::Vector3d wm, Eige
     // Push back to our initializer
     if(!is_initialized_vio) {
         initializer->feed_imu(timestamp, wm, am);
+        std::cout << "waiting for initialization!"<< std::endl;
     }
 
     // Push back to the zero velocity updater if we have it

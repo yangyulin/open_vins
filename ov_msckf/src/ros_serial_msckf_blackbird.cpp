@@ -93,6 +93,13 @@ int main(int argc, char** argv)
     ROS_INFO("bag start: %.1f",bag_start);
     ROS_INFO("bag duration: %.1f",bag_durr);
 
+    // IMU data vec and rotors time vec
+    std::vector<double> times_imu;
+    std::vector<Eigen::Vector3d> wms, ams;
+    std::vector<double> times_rotor;
+    std::vector<Eigen::VectorXd> rotors;
+
+
     // Read in what mode we should be processing in (1=mono, 2=stereo)
     int max_cameras;
     nh.param<int>("max_cameras", max_cameras, 1);
@@ -113,7 +120,7 @@ int main(int argc, char** argv)
     if(!left_img_time_file.is_open())  ROS_ERROR("Left image time file is not found!");
     if(!right_img_time_file.is_open())  ROS_ERROR("Right image time file is not found!");
 
-    // time vec
+    // camera time vec
     std::vector<double> times_left_img;
     std::vector<double> times_right_img;
 
@@ -179,8 +186,10 @@ int main(int argc, char** argv)
             wm << (*s2).angular_velocity.x, (*s2).angular_velocity.y, (*s2).angular_velocity.z;
             am << (*s2).linear_acceleration.x, (*s2).linear_acceleration.y, (*s2).linear_acceleration.z;
             // send it to our VIO system
-            sys->feed_measurement_imu(timem, wm, am);
-            viz->visualize_odometry(timem);
+            times_imu.push_back(timem); wms.push_back(wm); ams.push_back(am);
+            // sys->feed_measurement_imu(timem, wm, am);
+            // std::cout << std::setprecision(12) << timem << std::endl;
+            // viz->visualize_odometry(timem);
         }
 
 
@@ -189,14 +198,13 @@ int main(int argc, char** argv)
         boost::shared_ptr<quadrotor_msgs::MotorRPM> s3 = m.instantiate<quadrotor_msgs::MotorRPM>();
         if(s3 != nullptr && m.getTopic() == topic_bb_rpm){
             // convert to the right format
-            double timem = s3->sample_stamp[0].toSec();
-            std::setprecision(14);
-            std::cout  << timem << " ";
-            std::setprecision(9);
+            double timem = s3->header.stamp.toSec();
+            Eigen::VectorXd rpm = Eigen::MatrixXd::Zero(s3->rpm.size(),1);
             for(int i=0; i<s3->rpm.size(); i++){
-                std::cout << s3->rpm[i] * 2*3.1415926/60 << " ";
+                rpm(i) = s3->rpm[i] * 2*3.1415926/60;
             }
-            std::cout << std::endl;
+            times_rotor.push_back(timem);
+            rotors.push_back(rpm);
         }
 
 
@@ -223,7 +231,7 @@ int main(int argc, char** argv)
         std::getline(left_img_time_file, line);
         std::stringstream ss(line);
         ss >> temp_time;
-        times_left_img.push_back(temp_time/1.0e-9);
+        times_left_img.push_back(temp_time/1.0e9);
     }
     // load the right camera time vector
     if(max_cameras == 2 ){
@@ -231,14 +239,16 @@ int main(int argc, char** argv)
             std::getline(right_img_time_file, line);
             std::stringstream ss(line);
             ss >> temp_time;
-            times_right_img.push_back(temp_time/1.0e-9);
+            times_right_img.push_back(temp_time/1.0e9);
         }
     }
 
     // setup the video file reading
     cv::VideoCapture cap_left(path_to_left_img.c_str());
     if(!cap_left.isOpened()) ROS_ERROR("Left image file is not found!");
-    assert (cap_left.get(CV_CAP_PROP_FRAME_COUNT) == times_left_img.size());
+    std::cout << cap_left.get(CV_CAP_PROP_FRAME_COUNT) << std::endl;
+    std::cout << times_left_img.size() << std::endl;
+    assert (cap_left.get(CV_CAP_PROP_FRAME_COUNT) == times_left_img.size()-1);
     cv::VideoCapture cap_right(path_to_right_img.c_str());
     if(max_cameras == 2) {
         if(!cap_right.isOpened()) ROS_ERROR("Right image file is not found!");
@@ -246,77 +256,114 @@ int main(int argc, char** argv)
         assert(cap_right.get(CV_CAP_PROP_FRAME_COUNT) == times_right_img.size());
     }
 
+    int skip = 3;
+    int ct_img = 0;
     // now begin to process the measurements
-    for(size_t i=0; i<times_left_img.size(); i++){
-        // read left image
-        cap_left.set ( CV_CAP_PROP_POS_FRAMES , i );
-        has_left = cap_left.read(img0);
-        time = times_left_img.at(i);
-        // read right image
-        if(max_cameras == 2){
-            cap_right.set(CV_CAP_PROP_POS_FRAMES, i);
-            has_right = cap_right.read(img1);
-        }
+    for(size_t i=0; i<times_left_img.size()-1; i++){
 
-        // Fill our buffer if we have not
-        if(has_left && img0_buffer.rows == 0) {
-            has_left = false;
-            time_buffer = time;
-            img0_buffer = img0.clone();
-        }
+        if(ct_img == skip) {
+            std::cout << "processing the " << i << "-th image!" << std::endl;
+            time = times_left_img.at(i);
 
-        // Fill our buffer if we have not
-        if(has_right && img1_buffer.rows == 0) {
-            has_right = false;
-            img1_buffer = img1.clone();
-        }
-
-
-        // If we are in monocular mode, then we should process the left if we have it
-        if(max_cameras==1 && has_left) {
-            // process once we have initialized with the GT
-            Eigen::Matrix<double, 17, 1> imustate;
-            if(!gt_states.empty() && !sys->initialized() && DatasetReader::get_gt_state(time_buffer, imustate, gt_states)) {
-                //biases are pretty bad normally, so zero them
-                //imustate.block(11,0,6,1).setZero();
-                sys->initialize_with_gt(imustate);
-            } else if(gt_states.empty() || sys->initialized()) {
-                sys->feed_measurement_monocular(time_buffer, img0_buffer, 0);
+            // process the imu first
+            double time_imu = times_imu.front();
+            std::cout << time_imu << std::endl;
+            std::cout << time << std::endl;
+            while (time_imu <= time){
+                 sys->feed_measurement_imu(time_imu, wms.front(), ams.front());
+                 times_imu.erase(times_imu.begin()); wms.erase(wms.begin()); ams.erase(ams.begin());
+                 time_imu = times_imu.front();
             }
-            // visualize
-            viz->visualize();
-            // reset bools
-            has_left = false;
-            // move buffer forward
-            time_buffer = time;
-            img0_buffer = img0.clone();
-        }
+
+            // process the rotors meas
+            double time_rotor = times_rotor.front();
+//            while(time_rotor <= time){
+//
+//            }
 
 
-        // If we are in stereo mode and have both left and right, then process
-        if(max_cameras==2 && has_left && has_right) {
-            // process once we have initialized with the GT
-            Eigen::Matrix<double, 17, 1> imustate;
-            if(!gt_states.empty() && !sys->initialized() && DatasetReader::get_gt_state(time_buffer, imustate, gt_states)) {
-                //biases are pretty bad normally, so zero them
-                //imustate.block(11,0,6,1).setZero();
-                sys->initialize_with_gt(imustate);
-            } else if(gt_states.empty() || sys->initialized()) {
-                sys->feed_measurement_stereo(time_buffer, img0_buffer, img1_buffer, 0, 1);
+            // read left image
+            cap_left.set ( CV_CAP_PROP_POS_FRAMES , i );
+            cv::Mat img_temp;
+            has_left = cap_left.read(img_temp);
+            cvtColor(img_temp, img0, CV_BGR2GRAY);
+            // read right image
+            if(max_cameras == 2){
+                cap_right.set(CV_CAP_PROP_POS_FRAMES, i);
+                has_right = cap_right.read(img1);
             }
-            // visualize
-            viz->visualize();
-            // reset bools
-            has_left = false;
-            has_right = false;
-            // move buffer forward
-            time_buffer = time;
-            img0_buffer = img0.clone();
-            img1_buffer = img1.clone();
-        }
 
+            // Fill our buffer if we have not
+            if(has_left && img0_buffer.rows == 0) {
+                has_left = false;
+                time_buffer = time;
+                img0_buffer = img0.clone();
+            }
+
+            // Fill our buffer if we have not
+            if(has_right && img1_buffer.rows == 0) {
+                has_right = false;
+                img1_buffer = img1.clone();
+            }
+
+
+            // If we are in monocular mode, then we should process the left if we have it
+            if(max_cameras==1 && has_left) {
+                // process once we have initialized with the GT
+                Eigen::Matrix<double, 17, 1> imustate;
+                if(!gt_states.empty() && !sys->initialized() && DatasetReader::get_gt_state(time_buffer, imustate, gt_states)) {
+                    //biases are pretty bad normally, so zero them
+                    //imustate.block(11,0,6,1).setZero();
+                    sys->initialize_with_gt(imustate);
+                } else if(gt_states.empty() || sys->initialized()) {
+                    std::cout << img0_buffer.cols << ", " << img0_buffer.rows << std::endl;
+                    std::cout << std::setprecision(12) << time_buffer << std::endl;
+                    sys->feed_measurement_monocular(time_buffer, img0_buffer, 0);
+                    // visualize
+                    viz->visualize();
+                    // reset bools
+                    has_left = false;
+                    // move buffer forward
+                    time_buffer = time;
+                    img0_buffer = img0.clone();
+
+                }
+
+            }
+
+
+            // If we are in stereo mode and have both left and right, then process
+            if(max_cameras==2 && has_left && has_right) {
+                // process once we have initialized with the GT
+                Eigen::Matrix<double, 17, 1> imustate;
+                if(!gt_states.empty() && !sys->initialized() && DatasetReader::get_gt_state(time_buffer, imustate, gt_states)) {
+                    //biases are pretty bad normally, so zero them
+                    //imustate.block(11,0,6,1).setZero();
+                    sys->initialize_with_gt(imustate);
+                } else if(gt_states.empty() || sys->initialized()) {
+                    sys->feed_measurement_stereo(time_buffer, img0_buffer, img1_buffer, 0, 1);
+                    ct_img = 0;
+                    // visualize
+                    viz->visualize();
+                    // reset bools
+                    has_left = false;
+                    has_right = false;
+                    // move buffer forward
+                    time_buffer = time;
+                    img0_buffer = img0.clone();
+                    img1_buffer = img1.clone();
+
+                }
+
+            }
+            ct_img = 0;
+        }else{
+            ct_img ++;
+        }
 
     }
+
+
 
 
 
