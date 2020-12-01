@@ -24,9 +24,9 @@
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_pg_imu_01/bag_01.bag" />-->
 <!--        <param name="path_bag"    type="string" value="/home/lin/Data/dataset/sensor_rig/test_rig_01.bag" />-->
 <!--        <param name="path_bag"    type="string" value="/home/lin/Data/dataset/sensor_rig/test_rig_02.bag" />-->
-        <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/bag_spl209_02.bag" />
-        <param name="bag_start"   type="int"    value="55" />
-        <param name="bag_durr"    type="int"    value="400" />
+            <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/wheel/calib_05.bag" />
+        <param name="bag_start"   type="int"    value="0" />
+        <param name="bag_durr"    type="int"    value="-1" />
 
 
         <!-- world/filter parameters -->

@@ -6,9 +6,9 @@
 <!--        <node name="run_serial_msckf" pkg="ov_msckf" type="run_serial_msckf" output="screen" clear_params="true" required="true" launch-prefix="gdb -ex run &#45;&#45;args">-->
 
         <!-- bag topics -->
-        <param name="topic_imu"      type="string" value="/imu_ms/data" />
-        <param name="topic_camera0"  type="string" value="/camera/fisheye1/image_raw" />
-        <param name="topic_camera1"  type="string" value="/camera/fisheye2/image_raw" />
+        <param name="topic_imu"      type="string" value="/t265/imu" />
+        <param name="topic_camera0"  type="string" value="/t265/fisheye1/image_raw" />
+        <param name="topic_camera1"  type="string" value="/t265/fisheye2/image_raw" />
 
         <!-- bag parameters -->
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_d435/2020-07-17-11-13-13.bag" />-->
@@ -21,9 +21,7 @@
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_d435_19_4/bag_04.bag" />-->
 <!--        <param name="path_bag"    type="string" value="/home/rpng/datasets/sara_calib_t265_19/bag_01.bag" />-->
 <!--            <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/bag_spl209_02.bag" />-->
-<!--            <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/bag_spl_outside_01.bag" />-->
-<!--            <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/bag_spl_outside_01.bag" />-->
-            <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/wheel/calib_05.bag" />
+            <param name="path_bag"    type="string" value="/home/lin/Data/dataset/jackal/real_sense/rs_016.bag" />
 
 <!--        <param name="bag_start"   type="int"    value="55" />-->
 <!--        <param name="bag_durr"    type="int"    value="400" />-->
@@ -41,13 +39,13 @@
         <param name="use_imuavg"             type="bool"   value="true" />
         <param name="use_rk4int"             type="bool"   value="true" />
         <param name="use_stereo"             type="bool"   value="true" />
-        <param name="calib_cam_extrinsics"   type="bool"   value="false" />
-        <param name="calib_cam_intrinsics"   type="bool"   value="false" />
+        <param name="calib_cam_extrinsics"   type="bool"   value="true" />
+        <param name="calib_cam_intrinsics"   type="bool"   value="true" />
         <param name="calib_cam_timeoffset"   type="bool"   value="true" />
-        <param name="calib_camimu_dt"        type="double" value="0.00960783717104" />
+        <param name="calib_camimu_dt"        type="double" value="0.00023" />
         <param name="max_clones"             type="int"    value="15" />
         <param name="max_slam"               type="int"    value="30" />
-        <param name="max_cameras"            type="int"    value="1" />
+        <param name="max_cameras"            type="int"    value="2" />
         <param name="dt_slam_delay"          type="double" value="5" />
         <param name="feat_representation"    type="string" value="ANCHORED_3D" />
         <param name="init_window_time"       type="double" value="1.0" />
@@ -79,29 +77,38 @@
         <param name="gyroscope_random_walk"        type="double"   value="1.9393e-05" />
         <param name="accelerometer_noise_density"  type="double"   value="3.0000e-3" />
         <param name="accelerometer_random_walk"    type="double"   value="3.0000e-3" />
+<!--            <param name="gyroscope_noise_density"      type="double"   value="5.148030140844639e-05" />-->
+<!--            <param name="gyroscope_random_walk"        type="double"   value="4.999999987376214e-06" />-->
+<!--            <param name="accelerometer_noise_density"  type="double"   value="6.695245247101411e-04" />-->
+<!--            <param name="accelerometer_random_walk"    type="double"   value="9.999999747378752e-04" />-->
 
 
-        <!-- camera intrinsics -->
-        <param name="cam0_is_fisheye" type="bool" value="true" />
-        <param name="cam1_is_fisheye" type="bool" value="true" />
-        <rosparam param="cam0_k">[293.9848077897889, 293.4486654904098, 421.968565045988, 395.1500716819685]</rosparam>
-        <rosparam param="cam0_d">[-0.012306642629148592, 0.06549168388654483, -0.07152333743873135, 0.01820845224100378]</rosparam>
-        <rosparam param="cam1_k">[293.44045984429465, 293.02802861469144, 420.83274194521255, 396.0334231251445]</rosparam>
-        <rosparam param="cam1_d">[-0.010093534577301232, 0.06098470641277384, -0.06937157211524878, 0.018044878467046957]</rosparam>
-
-        <!-- camera extrinsics -->
-        <rosparam param="T_C0toI">
-                [ 0.99954645,  0.00174066,  0.0300643,   0.0575828,
-                 0.03004926,  0.00810494, -0.99951556, -0.02288765,
-                -0.00198349,  0.99996564,  0.00804896,  0.02500182,
-                 0,          0,          0,          1        ]
-        </rosparam>
-        <rosparam param="T_C1toI">
-                 [ 0.99932317,  0.00103429,  0.03677122,  0.12335033,
-                   0.03675949,  0.0096933,  -0.99927713, -0.0218943,
-                   -0.00138997,  0.99995248,  0.00964872,  0.02562038,
-                    0,          0,          0,          1        ]
-        </rosparam>
+            <!-- camera intrinsics -->
+            <param name="cam0_is_fisheye" type="bool" value="true" />
+            <param name="cam1_is_fisheye" type="bool" value="true" />
+            <rosparam param="cam0_sz">[848,800]</rosparam>
+            <rosparam param="cam1_sz">[848,800]</rosparam>
+            <rosparam param="cam0_k">[291.13796066966404, 291.36394099713164, 423.6993278899455, 392.83583649171186]</rosparam>
+            <rosparam param="cam0_d">[-0.0848522710825053, 0.25362120938018384, -0.2551190188579361, 0.08022766563879905]</rosparam>
+            <rosparam param="cam1_k">[286.528009660187, 286.5624852633101, 422.2802115463195, 397.3341035736785]</rosparam>
+            <rosparam param="cam1_d">[0.041634397718402064, -0.07541171196161034, 0.06973719488574245, -0.026937810584564664]</rosparam>
+            <!-- camera extrinsics -->
+            <rosparam param="T_C0toI">
+                    [
+                    -0.99981617, -0.00241359,  0.01902117,  0.00071215,
+                    0.00246341, -0.99999359,  0.00259647,  0.00115544,
+                    0.01901478,  0.00264285,  0.99981571,  0.00141113,
+                    0.0,         0.0,         0.0,         1.0
+                    ]
+            </rosparam>
+            <rosparam param="T_C1toI">
+                    [
+                    -0.99992173,  0.00085997,  0.01248166, -0.06297098,
+                    -0.00079132, -0.99998454,  0.00550389,  0.00074028,
+                    0.0124862,   0.00549359,  0.99990695,  0.00267563,
+                    0.0,         0.0,         0.0,         1.0
+                    ]
+            </rosparam>
 
 
     </node>

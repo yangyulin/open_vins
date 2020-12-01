@@ -520,6 +520,14 @@ void VioManager::do_feature_propagate_update(double timestamp) {
         }
     }
 
+    // check whether there are overlap between these features
+    std::cout << "[check feat slam id]: ";
+    for(auto &featiter : feats_slam){
+        std::cout << featiter->featid << " ";
+    }
+    std::cout << std::endl;
+
+
     // Concatenate our MSCKF feature arrays (i.e., ones not being used for slam updates)
     std::vector<Feature*> featsup_MSCKF = feats_lost;
     featsup_MSCKF.insert(featsup_MSCKF.end(), feats_marg.begin(), feats_marg.end());
